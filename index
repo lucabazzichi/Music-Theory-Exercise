@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>Allenamento di Teoria Musicale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1f150f;
+    --bg-alt:#2a1c13;
+    --card:#f6efe1;
+    --card-line:#e3d7bf;
+    --ink:#2a1f16;
+    --ink-soft:#5c4d3d;
+    --gold:#c99a44;
+    --gold-deep:#9c7530;
+    --good:#4f7a4a;
+    --good-bg:#e3ecd9;
+    --bad:#a8503a;
+    --bad-bg:#f3ddd4;
+    --muted:#c9b79b;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    background:
+      radial-gradient(circle at 15% 8%, rgba(201,154,68,0.10) 0, transparent 45%),
+      radial-gradient(circle at 85% 92%, rgba(201,154,68,0.08) 0, transparent 40%),
+      var(--bg);
+    color:var(--muted);
+    font-family:'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height:100vh;
+    min-height:100dvh;
+    display:flex;
+    justify-content:center;
+    padding:calc(20px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+    overflow-x:hidden;
+  }
+  .app{ width:100%; max-width:520px; }
+
+  /* ---------- header ---------- */
+  header{
+    position:relative;
+    padding:22px 18px 20px;
+    margin-bottom:18px;
+    border-radius:14px;
+    background:var(--bg-alt);
+    overflow:hidden;
+    border:1px solid rgba(201,154,68,0.18);
+  }
+  header::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image: radial-gradient(rgba(201,154,68,0.35) 1.4px, transparent 1.4px);
+    background-size: 16px 16px;
+    background-position: -4px -4px;
+    mask-image: linear-gradient(to bottom, black, transparent 85%);
+    opacity:0.35;
+    pointer-events:none;
+  }
+  h1{
+    position:relative;
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:1.55rem;
+    color:#f6efe1;
+    margin:0 0 6px;
+    letter-spacing:0.2px;
+  }
+  header p{
+    position:relative;
+    margin:0;
+    font-size:0.82rem;
+    line-height:1.4;
+    color:var(--muted);
+  }
+  header p em{ color:var(--gold); font-style:normal; }
+
+  /* ---------- category toggles ---------- */
+  .cats{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .cat-btn{
+    flex:1 1 auto;
+    min-width:0;
+    padding:10px 8px;
+    border-radius:10px;
+    border:1px solid rgba(201,154,68,0.35);
+    background:transparent;
+    color:var(--muted);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:0.78rem;
+    font-weight:600;
+    text-align:center;
+    cursor:pointer;
+    transition:background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .cat-btn.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#241a10;
+  }
+
+  /* ---------- difficulty select ---------- */
+  .diff-row{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .diff-row label{
+    font-size:0.76rem;
+    color:var(--muted);
+  }
+  .diff-row select{
+    background:var(--bg-alt);
+    color:var(--gold);
+    border:1px solid rgba(201,154,68,0.4);
+    border-radius:8px;
+    padding:7px 10px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:0.8rem;
+    font-weight:600;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+
+  /* ---------- score bar ---------- */
+  .scorebar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:14px;
+    padding:10px 14px;
+    background:var(--bg-alt);
+    border:1px solid rgba(201,154,68,0.18);
+    border-radius:10px;
+    font-family:'Space Mono', monospace;
+    font-size:0.74rem;
+  }
+  .scorebar .totals{ color:var(--gold); font-weight:700; }
+  .scorebar button{
+    background:none;
+    border:none;
+    color:var(--muted);
+    text-decoration:underline;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:0.72rem;
+    cursor:pointer;
+    padding:4px;
+  }
+  .breakdown{ font-size:0.68rem; color:var(--muted); margin-top:4px; }
+
+  /* ---------- exercise card ---------- */
+  .card{
+    position:relative;
+    background:var(--card);
+    color:var(--ink);
+    border-radius:16px;
+    padding:22px 20px 20px;
+    box-shadow:0 14px 30px -14px rgba(0,0,0,0.55);
+    background-image: repeating-linear-gradient(to bottom, transparent, transparent 27px, var(--card-line) 28px);
+    background-position: 0 68px;
+  }
+  .tag{
+    display:inline-block;
+    font-family:'Space Mono', monospace;
+    font-size:0.64rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--gold-deep);
+    background:rgba(201,154,68,0.15);
+    border:1px solid rgba(201,154,68,0.4);
+    padding:3px 8px;
+    border-radius:20px;
+    margin-bottom:12px;
+  }
+  .question{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:1.18rem;
+    line-height:1.4;
+    margin:0 0 18px;
+    color:var(--ink);
+  }
+  .options{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    margin-bottom:6px;
+  }
+  .opt{
+    text-align:left;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1.5px solid rgba(42,31,22,0.22);
+    background:rgba(255,255,255,0.5);
+    color:var(--ink);
+    font-family:'Space Mono', monospace;
+    font-size:0.9rem;
+    cursor:pointer;
+    transition:background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+  .opt:active{ transform:scale(0.98); }
+  .opt.correct{ background:var(--good-bg); border-color:var(--good); color:#2f4a2c; }
+  .opt.wrong{ background:var(--bad-bg); border-color:var(--bad); color:#6b2d1c; }
+  .opt.disabled{ cursor:default; }
+  .opt.faded{ opacity:0.5; }
+
+  .feedback{
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px dashed rgba(42,31,22,0.25);
+    font-size:0.86rem;
+    line-height:1.5;
+  }
+  .feedback .verdict{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:1.02rem;
+    margin-bottom:6px;
+  }
+  .feedback .verdict.ok{ color:var(--good); }
+  .feedback .verdict.no{ color:var(--bad); }
+  .feedback .explain{ color:var(--ink-soft); }
+  .feedback .curiosity{
+    margin-top:8px;
+    font-style:italic;
+    color:var(--gold-deep);
+  }
+
+  /* ---------- mini keyboard ---------- */
+  .keyboard{
+    position:relative;
+    height:78px;
+    margin:14px 0 4px;
+    width:100%;
+  }
+  .wkey{
+    position:absolute;
+    top:0; height:78px;
+    width:calc(100%/7 - 2px);
+    background:#fffdf8;
+    border:1px solid #b9a888;
+    border-radius:0 0 5px 5px;
+  }
+  .wkey.hl{ background:var(--gold); border-color:var(--gold-deep); }
+  .wkey .lbl{
+    position:absolute; bottom:5px; left:0; right:0;
+    text-align:center;
+    font-family:'Space Mono', monospace;
+    font-size:0.6rem;
+    color:#5c4d3d;
+  }
+  .wkey.hl .lbl{ color:#241a10; font-weight:700; }
+  .bkey{
+    position:absolute; top:0; height:48px;
+    width:calc(100%/7 * 0.58);
+    background:#241a10;
+    border-radius:0 0 4px 4px;
+    z-index:2;
+  }
+  .bkey.hl{ background:var(--gold-deep); }
+  .bkey .lbl{
+    position:absolute; bottom:5px; left:0; right:0;
+    text-align:center;
+    font-family:'Space Mono', monospace;
+    font-size:0.52rem;
+    color:#e3d7bf;
+  }
+
+  /* ---------- next button ---------- */
+  .next-wrap{ display:flex; justify-content:flex-end; margin-top:16px; }
+  .next-btn{
+    padding:11px 18px;
+    border-radius:10px;
+    border:none;
+    background:var(--ink);
+    color:#f6efe1;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:0.86rem;
+    cursor:pointer;
+  }
+  .next-btn:disabled{ opacity:0.35; cursor:default; }
+
+  footer{
+    text-align:center;
+    margin-top:18px;
+    font-size:0.68rem;
+    color:var(--ink-soft);
+    color:#7c6b58;
+    line-height:1.5;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>Allenamento di Teoria Musicale</h1>
+    <p>Esercizi casuali su <em>triadi</em>, <em>accordi diatonici</em>, <em>modi</em> e <em>intervalli</em> — i temi affrontati nel video <em>Music Theory Masterclass: Drilling the Basics</em> di Rick Beato.</p>
+  </header>
+
+  <div class="cats" id="cats"></div>
+
+  <div class="diff-row">
+    <label for="diffSelect">Difficoltà</label>
+    <select id="diffSelect">
+      <option value="facile">Facile</option>
+      <option value="intermedio">Intermedio</option>
+      <option value="difficile">Difficile</option>
+    </select>
+  </div>
+
+  <div class="scorebar">
+    <div>
+      <span class="totals" id="scoreTotals">0 / 0</span> corrette
+      <div class="breakdown" id="scoreBreakdown"></div>
+    </div>
+    <button id="resetBtn">azzera punteggio</button>
+  </div>
+
+  <div class="card">
+    <span class="tag" id="tag">Triadi</span>
+    <p class="question" id="question">Caricamento…</p>
+    <div class="options" id="options"></div>
+    <div id="keyboardWrap"></div>
+    <div class="feedback" id="feedback" style="display:none;"></div>
+    <div class="next-wrap">
+      <button class="next-btn" id="nextBtn" disabled>Prossimo esercizio →</button>
+    </div>
+  </div>
+
+  <footer>I formati delle triadi, il pattern degli accordi diatonici e la lista degli intervalli riprendono i concetti spiegati nel video. Le note vengono generate proceduralmente ad ogni esercizio.</footer>
+</div>
+
+<script>
+(function(){
+
+  /* ================= MUSIC THEORY CORE ================= */
+  const LETTERS = ['C','D','E','F','G','A','B'];
+  const NATURAL_PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  const SHARP_TABLE = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const FLAT_TABLE  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+
+  function parseNote(note){
+    const letter = note[0];
+    const acc = note.slice(1);
+    let pc = NATURAL_PC[letter];
+    if(acc === '#') pc += 1;
+    if(acc === 'b') pc -= 1;
+    pc = ((pc % 12)+12)%12;
+    return {letter, acc, pc};
+  }
+  function letterAt(rootLetter, stepsUp){
+    const idx = (LETTERS.indexOf(rootLetter) + stepsUp) % 7;
+    return LETTERS[idx];
+  }
+  function spellNote(targetPc, targetLetter, preferFlat){
+    const nat = NATURAL_PC[targetLetter];
+    for (const d of [0,1,-1]) {
+      if(((nat+d)%12+12)%12 === targetPc) return targetLetter + (d===1?'#':d===-1?'b':'');
+    }
+    return preferFlat ? FLAT_TABLE[targetPc] : SHARP_TABLE[targetPc];
+  }
+
+  const CHORD_TYPES = {
+    maggiore:  {semitones:[0,4,7], steps:[0,2,4], label:'maggiore', formula:'1 – 3 – 5'},
+    minore:    {semitones:[0,3,7], steps:[0,2,4], label:'minore', formula:'1 – ♭3 – 5'},
+    aumentata: {semitones:[0,4,8], steps:[0,2,4], label:'aumentata', formula:'1 – 3 – ♯5'},
+    diminuita: {semitones:[0,3,6], steps:[0,2,4], label:'diminuita', formula:'1 – ♭3 – ♭5'},
+    sus4:      {semitones:[0,5,7], steps:[0,3,4], label:'sus4', formula:'1 – 4 – 5'},
+    sus2:      {semitones:[0,2,7], steps:[0,1,4], label:'sus2', formula:'1 – 2 – 5'},
+    lidia:     {semitones:[0,6,7], steps:[0,3,4], label:'lidia (♯4)', formula:'1 – ♯4 – 5'}
+  };
+  const CHORD_ROOTS = ['C','C#','D','Eb','E','F','F#','G','G#','A','Bb','B'];
+
+  function buildTriad(root, typeKey){
+    const def = CHORD_TYPES[typeKey];
+    const {letter: rootLetter, pc: rootPc, acc} = parseNote(root);
+    const preferFlat = acc === 'b';
+    return def.semitones.map((semi,i)=>{
+      const targetPc = ((rootPc+semi)%12+12)%12;
+      const targetLetter = letterAt(rootLetter, def.steps[i]);
+      return spellNote(targetPc, targetLetter, preferFlat);
+    });
+  }
+
+  const KEYS = [
+    {root:'C',  scale:['C','D','E','F','G','A','B']},
+    {root:'G',  scale:['G','A','B','C','D','E','F#']},
+    {root:'D',  scale:['D','E','F#','G','A','B','C#']},
+    {root:'A',  scale:['A','B','C#','D','E','F#','G#']},
+    {root:'E',  scale:['E','F#','G#','A','B','C#','D#']},
+    {root:'B',  scale:['B','C#','D#','E','F#','G#','A#']},
+    {root:'F#', scale:['F#','G#','A#','B','C#','D#','F']},
+    {root:'F',  scale:['F','G','A','Bb','C','D','E']},
+    {root:'Bb', scale:['Bb','C','D','Eb','F','G','A']},
+    {root:'Eb', scale:['Eb','F','G','Ab','Bb','C','D']},
+    {root:'Ab', scale:['Ab','Bb','C','Db','Eb','F','G']},
+    {root:'Db', scale:['Db','Eb','F','Gb','Ab','Bb','C']}
+  ];
+  const QUALITIES = ['Maggiore','minore','minore','Maggiore','Maggiore','minore','diminuito'];
+  const ROMAN = ['I','II','III','IV','V','VI','VII'];
+  const QUALITY_SUFFIX = {Maggiore:'', minore:'m', diminuito:'°'};
+
+  const MODES = [
+    {name:'Ionico',    formula:[0,2,4,5,7,9,11], note:'È la scala maggiore stessa: nessuna alterazione.'},
+    {name:'Dorico',    formula:[0,2,3,5,7,9,10], note:'Minore ma con la sesta maggiore: suono jazzy, non troppo cupo.'},
+    {name:'Frigio',    formula:[0,1,3,5,7,8,10], note:'Seconda minore caratteristica: sapore spagnoleggiante/flamenco.'},
+    {name:'Lidio',     formula:[0,2,4,6,7,9,11], note:'Quarta aumentata: suono sospeso, onirico.'},
+    {name:'Misolidio', formula:[0,2,4,5,7,9,10], note:'Maggiore con settima minore: molto usato nel blues e nel rock.'},
+    {name:'Eolio',     formula:[0,2,3,5,7,8,10], note:'È la scala minore naturale.'},
+    {name:'Locrio',    formula:[0,1,3,5,6,8,10], note:'Unico modo con la quinta diminuita: instabile, raramente usato come tonalità stabile.'}
+  ];
+  const MODE_ROOTS = CHORD_ROOTS.filter(r => r!=='C#' && r!=='G#');
+
+  function buildModeScale(root, modeDef){
+    const {letter: rootLetter, pc: rootPc, acc} = parseNote(root);
+    const preferFlat = acc === 'b';
+    return modeDef.formula.map((semi,i)=>{
+      const targetPc = ((rootPc+semi)%12+12)%12;
+      const targetLetter = letterAt(rootLetter, i);
+      return spellNote(targetPc, targetLetter, preferFlat);
+    });
+  }
+
+  const INTERVALS = [
+    {s:0, name:'Unisono'},
+    {s:1, name:'Seconda minore'},
+    {s:2, name:'Seconda maggiore'},
+    {s:3, name:'Terza minore'},
+    {s:4, name:'Terza maggiore'},
+    {s:5, name:'Quarta giusta'},
+    {s:6, name:'Tritono (4a ecc. / 5a dim.)'},
+    {s:7, name:'Quinta giusta'},
+    {s:8, name:'Sesta minore'},
+    {s:9, name:'Sesta maggiore'},
+    {s:10,name:'Settima minore'},
+    {s:11,name:'Settima maggiore'},
+    {s:12,name:'Ottava giusta'}
+  ];
+
+  /* ================= HELPERS ================= */
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+  function uniqueBy(arr, keyFn){
+    const seen = new Set(); const out = [];
+    for(const item of arr){
+      const k = keyFn(item);
+      if(!seen.has(k)){ seen.add(k); out.push(item); }
+    }
+    return out;
+  }
+  function closenessTriad(a,b){
+    const A = CHORD_TYPES[a].semitones, B = CHORD_TYPES[b].semitones;
+    return A.reduce((s,v,i)=>s+Math.abs(v-B[i]),0);
+  }
+  function closenessMode(a,b){
+    return a.formula.reduce((s,v,i)=>s+Math.abs(v-b.formula[i]),0);
+  }
+  function sortByCloseness(items, scoreFn, farthestFirst){
+    const sorted = items.map(it=>({it, s:scoreFn(it)+Math.random()*0.001}))
+                .sort((x,y)=> farthestFirst ? y.s-x.s : x.s-y.s)
+                .map(x=>x.it);
+    return sorted;
+  }
+  function orderByDifficulty(items, difficulty, scoreFn){
+    if(difficulty === 'difficile') return sortByCloseness(items, scoreFn, false); // più simili prima
+    if(difficulty === 'facile') return sortByCloseness(items, scoreFn, true);     // più diversi prima
+    return shuffle(items);
+  }
+
+  /* ================= EXERCISE GENERATORS ================= */
+  function genTriadExercise(difficulty){
+    let typeKey = pick(Object.keys(CHORD_TYPES));
+    let rootPool = CHORD_ROOTS;
+    if(typeKey === 'lidia') rootPool = CHORD_ROOTS.filter(r => r!=='C#' && r!=='G#');
+    const root = pick(rootPool);
+    const def = CHORD_TYPES[typeKey];
+    const correctNotes = buildTriad(root, typeKey);
+    const correctLabel = correctNotes.join(' – ');
+
+    const otherTypes = Object.keys(CHORD_TYPES).filter(k=>k!==typeKey);
+    const orderedTypes = orderByDifficulty(otherTypes, difficulty, t => closenessTriad(typeKey, t));
+    const distractorTypes = orderedTypes.slice(0,4);
+    let options = [correctLabel];
+    for(const dt of distractorTypes){
+      const notes = buildTriad(root, dt).join(' – ');
+      if(!options.includes(notes)) options.push(notes);
+      if(options.length===4) break;
+    }
+    options = shuffle(options);
+
+    return {
+      category:'triadi',
+      tag:'Triadi',
+      question:`Quali sono le note della triade ${def.label} costruita su ${root}?`,
+      options,
+      correctAnswer: correctLabel,
+      explain: `Formula: ${def.formula}  →  ${correctLabel}`,
+      curiosity: typeKey==='lidia' ? 'Curiosità: questa sonorità (1-♯4-5) è quella usata nei temi de I Simpson e di Six Feet Under.' : null,
+      keyboard: { pcs: correctNotes.map(n=>parseNote(n).pc), rootPc: parseNote(root).pc }
+    };
+  }
+
+  function genDiatonicExercise(difficulty){
+    const key = pick(KEYS);
+    const degreeIdx = Math.floor(Math.random()*7);
+    const correctRoot = key.scale[degreeIdx];
+    const correctQuality = QUALITIES[degreeIdx];
+    const label = (r,q)=> `${r}${QUALITY_SUFFIX[q]}  (${r} ${q})`;
+    const correctLabel = label(correctRoot, correctQuality);
+
+    let candidates = [];
+    if(difficulty === 'difficile'){
+      // priorità 1: stessa fondamentale, qualità diversa
+      ['Maggiore','minore','diminuito'].forEach(q=>{
+        if(q!==correctQuality) candidates.push({root:correctRoot, quality:q});
+      });
+      // priorità 2: stessa qualità, fondamentale diversa (facile confondersi di grado)
+      for(let off=1; off<7; off++){
+        const di = (degreeIdx+off)%7;
+        if(QUALITIES[di]===correctQuality) candidates.push({root:key.scale[di], quality:QUALITIES[di]});
+      }
+      candidates = uniqueBy(candidates, c=>c.root+c.quality).filter(c=>!(c.root===correctRoot && c.quality===correctQuality));
+      if(candidates.length < 3){
+        for(let off=1; off<7; off++){
+          const di = (degreeIdx+off)%7;
+          candidates.push({root:key.scale[di], quality:QUALITIES[di]});
+        }
+        candidates = uniqueBy(candidates, c=>c.root+c.quality).filter(c=>!(c.root===correctRoot && c.quality===correctQuality));
+      }
+      candidates = candidates.slice(0,3);
+    } else if(difficulty === 'facile'){
+      // fondamentali diverse, il più lontane possibile dal grado corretto: nessuna ambiguità di qualità sulla stessa fondamentale
+      const byDistance = [3,4,2,5,1,6].map(off=>{
+        const di = (degreeIdx+off)%7;
+        return {root:key.scale[di], quality:QUALITIES[di]};
+      });
+      candidates = uniqueBy(byDistance, c=>c.root+c.quality).filter(c=>!(c.root===correctRoot && c.quality===correctQuality));
+      candidates = candidates.slice(0,3);
+    } else {
+      ['Maggiore','minore','diminuito'].forEach(q=>{
+        if(q!==correctQuality) candidates.push({root:correctRoot, quality:q});
+      });
+      [1,2,5,6].forEach(off=>{
+        const di = (degreeIdx+off)%7;
+        candidates.push({root:key.scale[di], quality:QUALITIES[di]});
+      });
+      candidates = uniqueBy(candidates, c=>c.root+c.quality).filter(c=>!(c.root===correctRoot && c.quality===correctQuality));
+      candidates = shuffle(candidates).slice(0,3);
+    }
+
+    let options = [correctLabel, ...candidates.map(c=>label(c.root,c.quality))];
+    options = shuffle(options);
+
+    const chordNotes = buildTriad(correctRoot, correctQuality==='Maggiore'?'maggiore':correctQuality==='minore'?'minore':'diminuita');
+
+    return {
+      category:'diatonici',
+      tag:'Accordi diatonici',
+      question:`In tonalità di ${key.root} maggiore, qual è l'accordo sul grado ${ROMAN[degreeIdx]}?`,
+      options,
+      correctAnswer: correctLabel,
+      explain: `Schema degli accordi diatonici in tonalità maggiore: I Magg. – II min. – III min. – IV Magg. – V Magg. – VI min. – VII dim. Grado ${ROMAN[degreeIdx]} in ${key.root} maggiore → ${correctLabel}`,
+      curiosity: null,
+      keyboard: { pcs: chordNotes.map(n=>parseNote(n).pc), rootPc: parseNote(correctRoot).pc }
+    };
+  }
+
+  function genModeExercise(difficulty){
+    const buildScaleType = Math.random() < 0.5;
+
+    if(buildScaleType){
+      const modeIdx = Math.floor(Math.random()*MODES.length);
+      const modeDef = MODES[modeIdx];
+      let rootPool = MODE_ROOTS;
+      if(modeDef.name === 'Locrio') rootPool = rootPool.filter(r=>r!=='Eb');
+      const root = pick(rootPool);
+      const correctNotes = buildModeScale(root, modeDef);
+      const correctLabel = correctNotes.join(' ');
+
+      const otherModes = MODES.filter(m=>m.name!==modeDef.name);
+      const orderedModes = orderByDifficulty(otherModes, difficulty, m => closenessMode(modeDef, m));
+      const distractorModes = orderedModes.slice(0,4);
+      let options = [correctLabel];
+      for(const dm of distractorModes){
+        const notes = buildModeScale(root, dm).join(' ');
+        if(!options.includes(notes)) options.push(notes);
+        if(options.length===4) break;
+      }
+      options = shuffle(options);
+
+      return {
+        category:'modi',
+        tag:'Modi',
+        question:`Quali sono le note del modo ${modeDef.name} costruito su ${root}?`,
+        options,
+        correctAnswer: correctLabel,
+        explain: `${root} ${modeDef.name} → ${correctLabel}`,
+        curiosity: modeDef.note,
+        keyboard: { pcs: correctNotes.map(n=>parseNote(n).pc), rootPc: parseNote(root).pc }
+      };
+    } else {
+      const key = pick(KEYS);
+      const degreeIdx = Math.floor(Math.random()*7);
+      const startNote = key.scale[degreeIdx];
+      const correctMode = MODES[degreeIdx];
+
+      const otherModes = MODES.filter(m=>m.name!==correctMode.name);
+      const orderedModes = orderByDifficulty(otherModes, difficulty, m => closenessMode(correctMode, m));
+      const distractorModes = orderedModes.slice(0,3);
+      let options = shuffle([correctMode.name, ...distractorModes.map(m=>m.name)]);
+
+      const modeNotes = buildModeScale(startNote, correctMode);
+
+      return {
+        category:'modi',
+        tag:'Modi',
+        question:`Le note della tonalità di ${key.root} maggiore, suonate a partire da ${startNote} (grado ${ROMAN[degreeIdx]}), danno origine a quale modo?`,
+        options,
+        correctAnswer: correctMode.name,
+        explain: `Grado ${ROMAN[degreeIdx]} della scala maggiore → modo ${correctMode.name}. (Ionico=I, Dorico=II, Frigio=III, Lidio=IV, Misolidio=V, Eolio=VI, Locrio=VII)`,
+        curiosity: correctMode.note,
+        keyboard: { pcs: modeNotes.map(n=>parseNote(n).pc), rootPc: parseNote(startNote).pc }
+      };
+    }
+  }
+
+  function genIntervalExercise(difficulty){
+    const root = pick(CHORD_ROOTS);
+    const iv = pick(INTERVALS);
+    const preferFlat = root.includes('b');
+    const table = preferFlat ? FLAT_TABLE : SHARP_TABLE;
+    const rootPc = parseNote(root).pc;
+    const targetPc = (rootPc + iv.s) % 12;
+    const targetNote = table[targetPc];
+    const modeA = Math.random() < 0.5;
+
+    if(modeA){
+      // ask for interval name given two notes
+      const otherIvs = INTERVALS.filter(x=>x.s!==iv.s);
+      const orderedIvs = orderByDifficulty(otherIvs, difficulty, x => Math.abs(x.s - iv.s));
+      let distractorIvs = orderedIvs.slice(0,3);
+      let options = shuffle([iv.name, ...distractorIvs.map(x=>x.name)]);
+      return {
+        category:'intervalli',
+        tag:'Intervalli',
+        question:`Che intervallo c'è tra ${root} e ${targetNote}, salendo?`,
+        options,
+        correctAnswer: iv.name,
+        explain: `Distanza: ${iv.s} semitoni → ${iv.name}.`,
+        curiosity: null,
+        keyboard: { pcs:[rootPc, targetPc], rootPc, secondPc: targetPc }
+      };
+    } else {
+      // ask for the target note given root + interval name
+      const offsetPool = [1,2,-1,-2,3,-3];
+      const orderedOffsets = orderByDifficulty(offsetPool, difficulty, o => Math.abs(o));
+      const distractorPcs = orderedOffsets.map(d=>((targetPc+d)%12+12)%12).filter(p=>p!==targetPc);
+      const uniqPcs = [...new Set(distractorPcs)].slice(0,3);
+      let options = shuffle([targetNote, ...uniqPcs.map(p=>table[p])]);
+      options = uniqueBy(options, x=>x);
+      while(options.length < 4){
+        const p = Math.floor(Math.random()*12);
+        const n = table[p];
+        if(!options.includes(n)) options.push(n);
+      }
+      return {
+        category:'intervalli',
+        tag:'Intervalli',
+        question:`Partendo da ${root} e salendo di una ${iv.name.toLowerCase()}, a quale nota arrivi?`,
+        options,
+        correctAnswer: targetNote,
+        explain: `${root} + ${iv.name} (${iv.s} semitoni) → ${targetNote}.`,
+        curiosity: null,
+        keyboard: { pcs:[rootPc, targetPc], rootPc, secondPc: targetPc }
+      };
+    }
+  }
+
+  const GENERATORS = { triadi: genTriadExercise, diatonici: genDiatonicExercise, modi: genModeExercise, intervalli: genIntervalExercise };
+  const CATEGORY_LABELS = { triadi:'Triadi', diatonici:'Accordi diatonici', modi:'Modi', intervalli:'Intervalli' };
+
+  /* ================= KEYBOARD RENDER ================= */
+  const WHITE_PCS = [0,2,4,5,7,9,11];
+  const BLACK_DEFS = [
+    {pc:1, after:0},{pc:3, after:1},{pc:6, after:3},{pc:8, after:4},{pc:10, after:5}
+  ];
+  function renderKeyboard(data){
+    const pcs = data.pcs || [];
+    const rootPc = data.rootPc;
+    const secondPc = data.secondPc;
+    let html = '<div class="keyboard">';
+    WHITE_PCS.forEach((pc,i)=>{
+      const isHl = pcs.includes(pc);
+      html += `<div class="wkey ${isHl?'hl':''}" style="left:calc((100%/7)*${i})"></div>`;
+    });
+    BLACK_DEFS.forEach(b=>{
+      const isHl = pcs.includes(b.pc);
+      html += `<div class="bkey ${isHl?'hl':''}" style="left:calc((100%/7)*${b.after+1} - (100%/7 * 0.29))"></div>`;
+    });
+    html += '</div>';
+    return html;
+  }
+
+  /* ================= STATE ================= */
+  let activeCats = new Set(['triadi','diatonici','modi','intervalli']);
+  let difficulty = 'intermedio';
+  let current = null;
+  let answered = false;
+  let stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, intervalli:{t:0,c:0} } };
+
+  async function loadStats(){
+    if(typeof window.storage === 'undefined') return;
+    try{
+      const res = await window.storage.get('mt-stats', false);
+      if(res && res.value){
+        const parsed = JSON.parse(res.value);
+        stats.total = parsed.total || 0;
+        stats.correct = parsed.correct || 0;
+        Object.keys(stats.byCat).forEach(cat=>{
+          if(parsed.byCat && parsed.byCat[cat]) stats.byCat[cat] = parsed.byCat[cat];
+        });
+        if(parsed.difficulty === 'facile' || parsed.difficulty === 'intermedio' || parsed.difficulty === 'difficile') difficulty = parsed.difficulty;
+      }
+    }catch(e){ /* no saved stats yet */ }
+  }
+  async function saveStats(){
+    if(typeof window.storage === 'undefined') return;
+    try{ await window.storage.set('mt-stats', JSON.stringify({ total: stats.total, correct: stats.correct, byCat: stats.byCat, difficulty }), false); }
+    catch(e){ /* best effort */ }
+  }
+
+  /* ================= RENDER ================= */
+  const catsEl = document.getElementById('cats');
+  const tagEl = document.getElementById('tag');
+  const questionEl = document.getElementById('question');
+  const optionsEl = document.getElementById('options');
+  const feedbackEl = document.getElementById('feedback');
+  const nextBtn = document.getElementById('nextBtn');
+  const scoreTotals = document.getElementById('scoreTotals');
+  const scoreBreakdown = document.getElementById('scoreBreakdown');
+  const keyboardWrap = document.getElementById('keyboardWrap');
+  const resetBtn = document.getElementById('resetBtn');
+  const diffSelect = document.getElementById('diffSelect');
+
+  function renderCats(){
+    catsEl.innerHTML = '';
+    Object.keys(CATEGORY_LABELS).forEach(cat=>{
+      const btn = document.createElement('button');
+      btn.className = 'cat-btn' + (activeCats.has(cat) ? ' active' : '');
+      btn.textContent = CATEGORY_LABELS[cat];
+      btn.onclick = ()=>{
+        if(activeCats.has(cat)){
+          if(activeCats.size > 1) activeCats.delete(cat);
+        } else {
+          activeCats.add(cat);
+        }
+        renderCats();
+        if(!activeCats.has(current.category)){
+          newExercise();
+        }
+      };
+      catsEl.appendChild(btn);
+    });
+  }
+
+  function renderScore(){
+    scoreTotals.textContent = `${stats.correct} / ${stats.total}`;
+    const parts = Object.keys(CATEGORY_LABELS).map(cat=>{
+      const s = stats.byCat[cat] || {t:0,c:0};
+      return `${CATEGORY_LABELS[cat]}: ${s.c}/${s.t}`;
+    });
+    scoreBreakdown.textContent = parts.join('   ·   ');
+  }
+
+  function renderExercise(){
+    tagEl.textContent = current.tag;
+    questionEl.textContent = current.question;
+    optionsEl.innerHTML = '';
+    keyboardWrap.innerHTML = '';
+    feedbackEl.style.display = 'none';
+    feedbackEl.innerHTML = '';
+    nextBtn.disabled = true;
+
+    current.options.forEach(opt=>{
+      const btn = document.createElement('button');
+      btn.className = 'opt';
+      btn.textContent = opt;
+      btn.onclick = ()=> selectAnswer(opt, btn);
+      optionsEl.appendChild(btn);
+    });
+  }
+
+  function selectAnswer(opt, btnEl){
+    if(answered) return;
+    answered = true;
+    const isCorrect = opt === current.correctAnswer;
+
+    [...optionsEl.children].forEach(b=>{
+      b.classList.add('disabled','faded');
+      b.onclick = null;
+      if(b.textContent === current.correctAnswer){ b.classList.add('correct'); b.classList.remove('faded'); }
+      if(b === btnEl && !isCorrect){ b.classList.add('wrong'); b.classList.remove('faded'); }
+    });
+
+    stats.total++;
+    stats.byCat[current.category].t++;
+    if(isCorrect){ stats.correct++; stats.byCat[current.category].c++; }
+    saveStats();
+    renderScore();
+
+    feedbackEl.style.display = 'block';
+    feedbackEl.innerHTML = `
+      <div class="verdict ${isCorrect?'ok':'no'}">${isCorrect ? '✓ Esatto' : '✗ Non esatto'}</div>
+      <div class="explain">${current.explain}</div>
+      ${current.curiosity ? `<div class="curiosity">${current.curiosity}</div>` : ''}
+    `;
+    keyboardWrap.innerHTML = renderKeyboard(current.keyboard);
+    nextBtn.disabled = false;
+  }
+
+  function newExercise(){
+    const cats = [...activeCats];
+    const cat = pick(cats);
+    current = GENERATORS[cat](difficulty);
+    answered = false;
+    renderExercise();
+  }
+
+  nextBtn.addEventListener('click', newExercise);
+  diffSelect.addEventListener('change', ()=>{
+    difficulty = diffSelect.value;
+    saveStats();
+    newExercise();
+  });
+  resetBtn.addEventListener('click', async ()=>{
+    stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, intervalli:{t:0,c:0} } };
+    await saveStats();
+    renderScore();
+  });
+
+  (async function init(){
+    renderCats();
+    await loadStats();
+    diffSelect.value = difficulty;
+    renderScore();
+    newExercise();
+  })();
+
+})();
+</script>
+</body>
+</html>
