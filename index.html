@@ -72,17 +72,9 @@
     font-weight:600;
     font-size:1.55rem;
     color:#f6efe1;
-    margin:0 0 6px;
+    margin:0;
     letter-spacing:0.2px;
   }
-  header p{
-    position:relative;
-    margin:0;
-    font-size:0.82rem;
-    line-height:1.4;
-    color:var(--muted);
-  }
-  header p em{ color:var(--gold); font-style:normal; }
 
   /* ---------- category toggles ---------- */
   .cats{
@@ -121,21 +113,25 @@
     margin-bottom:14px;
   }
   .diff-row label{
-    font-size:0.76rem;
+    font-size:0.72rem;
     color:var(--muted);
+    letter-spacing:0.02em;
   }
   .diff-row select{
-    background:var(--bg-alt);
+    background:var(--bg-alt) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23c99a44' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center;
     color:var(--gold);
     border:1px solid rgba(201,154,68,0.4);
-    border-radius:8px;
-    padding:7px 10px;
+    border-radius:999px;
+    padding:7px 30px 7px 14px;
     font-family:'Space Grotesk', sans-serif;
-    font-size:0.8rem;
+    font-size:0.78rem;
     font-weight:600;
     -webkit-appearance:none;
     appearance:none;
+    cursor:pointer;
+    line-height:1.2;
   }
+  .diff-row select:focus{ outline:1.5px solid var(--gold); outline-offset:1px; }
 
   /* ---------- score bar ---------- */
   .scorebar{
@@ -312,7 +308,6 @@
 
   <header>
     <h1>Allenamento di Teoria Musicale</h1>
-    <p>Esercizi casuali su <em>triadi</em>, <em>accordi diatonici</em>, <em>modi</em> (relativi e paralleli) e <em>intervalli</em> — dai video <em>Music Theory Masterclass: Drilling the Basics</em> e <em>Scales Vs Modes: What's the Difference?</em> di Rick Beato.</p>
   </header>
 
   <div class="cats" id="cats"></div>
@@ -696,6 +691,38 @@
     }
   }
 
+  const SCALE_TYPES = [
+    {name:'Maggiore',        formula:[0,2,4,5,7,9,11], formulaLabel:'1 – 2 – 3 – 4 – 5 – 6 – 7',       note:'Schema di toni/semitoni: T-T-S-T-T-T-S. È la scala di riferimento per tutte le altre.'},
+    {name:'Minore naturale', formula:[0,2,3,5,7,8,10], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – ♭6 – ♭7',     note:'Corrisponde al modo Eolio: stessa armatura della relativa maggiore, tonica diversa.'},
+    {name:'Minore armonica', formula:[0,2,3,5,7,8,11], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – ♭6 – 7',      note:'Settima maggiore (sensibile) per creare tensione verso la tonica: caratteristico il salto di seconda eccedente tra 6° e 7° grado.'},
+    {name:'Minore melodica', formula:[0,2,3,5,7,9,11], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – 6 – 7',       note:'Sesta e settima maggiori per ammorbidire il salto della armonica (qui nella forma "jazz", identica in salita e in discesa).'}
+  ];
+  const SCALE_ROOTS_BY_DIFF = {
+    facile: ['C','D','F','G','A'],
+    intermedio: MODE_ROOTS,
+    difficile: ['F#','B','E','Eb','Bb']
+  };
+
+  function genScaleExercise(difficulty){
+    const rootPool = SCALE_ROOTS_BY_DIFF[difficulty] || MODE_ROOTS;
+    const root = pick(rootPool);
+    const scaleDef = pick(SCALE_TYPES);
+    const notes = buildModeScale(root, scaleDef);
+    const correctLabel = notes.join(' ');
+    const options = shuffle(SCALE_TYPES.map(t=>t.name));
+
+    return {
+      category:'scale',
+      tag:'Scale',
+      question:`Che tipo di scala è: ${correctLabel}?`,
+      options,
+      correctAnswer: scaleDef.name,
+      explain: `${scaleDef.formulaLabel} → ${root} ${scaleDef.name}: ${correctLabel}`,
+      curiosity: scaleDef.note,
+      keyboard: { pcs: notes.map(n=>parseNote(n).pc), rootPc: parseNote(root).pc }
+    };
+  }
+
   function genIntervalExercise(difficulty){
     const root = pick(CHORD_ROOTS);
     const iv = pick(INTERVALS);
@@ -748,8 +775,8 @@
     }
   }
 
-  const GENERATORS = { triadi: genTriadExercise, diatonici: genDiatonicExercise, modi: genModeExercise, intervalli: genIntervalExercise };
-  const CATEGORY_LABELS = { triadi:'Triadi', diatonici:'Accordi diatonici', modi:'Modi', intervalli:'Intervalli' };
+  const GENERATORS = { triadi: genTriadExercise, diatonici: genDiatonicExercise, modi: genModeExercise, scale: genScaleExercise, intervalli: genIntervalExercise };
+  const CATEGORY_LABELS = { triadi:'Triadi', diatonici:'Accordi diatonici', modi:'Modi', scale:'Scale', intervalli:'Intervalli' };
 
   /* ================= KEYBOARD RENDER ================= */
   const WHITE_PCS = [0,2,4,5,7,9,11];
@@ -774,11 +801,11 @@
   }
 
   /* ================= STATE ================= */
-  let activeCats = new Set(['triadi','diatonici','modi','intervalli']);
+  let activeCats = new Set(['triadi','diatonici','modi','scale','intervalli']);
   let difficulty = 'intermedio';
   let current = null;
   let answered = false;
-  let stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, intervalli:{t:0,c:0} } };
+  let stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, scale:{t:0,c:0}, intervalli:{t:0,c:0} } };
 
   async function loadStats(){
     if(typeof window.storage === 'undefined') return;
@@ -905,7 +932,7 @@
     newExercise();
   });
   resetBtn.addEventListener('click', async ()=>{
-    stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, intervalli:{t:0,c:0} } };
+    stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, scale:{t:0,c:0}, intervalli:{t:0,c:0} } };
     await saveStats();
     renderScore();
   });
