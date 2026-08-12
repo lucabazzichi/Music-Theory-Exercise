@@ -74,6 +74,7 @@
     color:#f6efe1;
     margin:0;
     letter-spacing:0.2px;
+    text-align:center;
   }
 
   /* ---------- category toggles ---------- */
@@ -108,7 +109,7 @@
   .diff-row{
     display:flex;
     align-items:center;
-    justify-content:flex-end;
+    justify-content:space-between;
     gap:8px;
     margin-bottom:14px;
   }
@@ -292,15 +293,6 @@
     cursor:pointer;
   }
   .next-btn:disabled{ opacity:0.35; cursor:default; }
-
-  footer{
-    text-align:center;
-    margin-top:18px;
-    font-size:0.68rem;
-    color:var(--ink-soft);
-    color:#7c6b58;
-    line-height:1.5;
-  }
 </style>
 </head>
 <body>
@@ -310,8 +302,6 @@
     <h1>Allenamento di Teoria Musicale</h1>
   </header>
 
-  <div class="cats" id="cats"></div>
-
   <div class="diff-row">
     <label for="diffSelect">Difficoltà</label>
     <select id="diffSelect">
@@ -320,6 +310,8 @@
       <option value="difficile">Difficile</option>
     </select>
   </div>
+
+  <div class="cats" id="cats"></div>
 
   <div class="scorebar">
     <div>
@@ -340,7 +332,6 @@
     </div>
   </div>
 
-  <footer>I formati delle triadi, il pattern degli accordi diatonici e la lista degli intervalli riprendono i concetti spiegati nel video. Le note vengono generate proceduralmente ad ogni esercizio.</footer>
 </div>
 
 <script>
@@ -776,7 +767,7 @@
   }
 
   const GENERATORS = { triadi: genTriadExercise, diatonici: genDiatonicExercise, modi: genModeExercise, scale: genScaleExercise, intervalli: genIntervalExercise };
-  const CATEGORY_LABELS = { triadi:'Triadi', diatonici:'Accordi diatonici', modi:'Modi', scale:'Scale', intervalli:'Intervalli' };
+  const CATEGORY_LABELS = { triadi:'Triadi', diatonici:'Accordi', modi:'Modi', scale:'Scale', intervalli:'Intervalli' };
 
   /* ================= KEYBOARD RENDER ================= */
   const WHITE_PCS = [0,2,4,5,7,9,11];
