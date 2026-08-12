@@ -45,6 +45,12 @@
     overflow-x:hidden;
   }
   .app{ width:100%; max-width:520px; }
+  @media (min-width: 700px){
+    .app{ max-width:640px; }
+  }
+  @media (min-width: 1000px){
+    .app{ max-width:800px; }
+  }
 
   /* ---------- header ---------- */
   header{
@@ -243,8 +249,9 @@
   .keyboard{
     position:relative;
     height:78px;
-    margin:14px 0 4px;
+    margin:14px auto 4px;
     width:100%;
+    max-width:480px;
   }
   .wkey{
     position:absolute;
