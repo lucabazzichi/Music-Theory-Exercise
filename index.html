@@ -312,7 +312,7 @@
 
   <header>
     <h1>Allenamento di Teoria Musicale</h1>
-    <p>Esercizi casuali su <em>triadi</em>, <em>accordi diatonici</em>, <em>modi</em> e <em>intervalli</em> — i temi affrontati nel video <em>Music Theory Masterclass: Drilling the Basics</em> di Rick Beato.</p>
+    <p>Esercizi casuali su <em>triadi</em>, <em>accordi diatonici</em>, <em>modi</em> (relativi e paralleli) e <em>intervalli</em> — dai video <em>Music Theory Masterclass: Drilling the Basics</em> e <em>Scales Vs Modes: What's the Difference?</em> di Rick Beato.</p>
   </header>
 
   <div class="cats" id="cats"></div>
@@ -419,13 +419,13 @@
   const QUALITY_SUFFIX = {Maggiore:'', minore:'m', diminuito:'°'};
 
   const MODES = [
-    {name:'Ionico',    formula:[0,2,4,5,7,9,11], note:'È la scala maggiore stessa: nessuna alterazione.'},
-    {name:'Dorico',    formula:[0,2,3,5,7,9,10], note:'Minore ma con la sesta maggiore: suono jazzy, non troppo cupo.'},
-    {name:'Frigio',    formula:[0,1,3,5,7,8,10], note:'Seconda minore caratteristica: sapore spagnoleggiante/flamenco.'},
-    {name:'Lidio',     formula:[0,2,4,6,7,9,11], note:'Quarta aumentata: suono sospeso, onirico.'},
-    {name:'Misolidio', formula:[0,2,4,5,7,9,10], note:'Maggiore con settima minore: molto usato nel blues e nel rock.'},
-    {name:'Eolio',     formula:[0,2,3,5,7,8,10], note:'È la scala minore naturale.'},
-    {name:'Locrio',    formula:[0,1,3,5,6,8,10], note:'Unico modo con la quinta diminuita: instabile, raramente usato come tonalità stabile.'}
+    {name:'Ionian',     formula:[0,2,4,5,7,9,11], note:'È la scala maggiore stessa: nessuna alterazione.'},
+    {name:'Dorian',     formula:[0,2,3,5,7,9,10], note:'Minore ma con la sesta maggiore: suono jazzy, non troppo cupo.'},
+    {name:'Phrygian',   formula:[0,1,3,5,7,8,10], note:'Seconda minore caratteristica: sapore spagnoleggiante/flamenco.'},
+    {name:'Lydian',     formula:[0,2,4,6,7,9,11], note:'Quarta aumentata: suono sospeso, onirico.'},
+    {name:'Mixolydian', formula:[0,2,4,5,7,9,10], note:'Maggiore con settima minore: molto usato nel blues e nel rock.'},
+    {name:'Aeolian',    formula:[0,2,3,5,7,8,10], note:'È la scala minore naturale.'},
+    {name:'Locrian',    formula:[0,1,3,5,6,8,10], note:'Unico modo con la quinta diminuita: instabile, raramente usato come tonalità stabile.'}
   ];
   const MODE_ROOTS = CHORD_ROOTS.filter(r => r!=='C#' && r!=='G#');
 
@@ -591,13 +591,13 @@
   }
 
   function genModeExercise(difficulty){
-    const buildScaleType = Math.random() < 0.5;
+    const roll = Math.random();
 
-    if(buildScaleType){
+    if(roll < 0.38){
       const modeIdx = Math.floor(Math.random()*MODES.length);
       const modeDef = MODES[modeIdx];
       let rootPool = MODE_ROOTS;
-      if(modeDef.name === 'Locrio') rootPool = rootPool.filter(r=>r!=='Eb');
+      if(modeDef.name === 'Locrian') rootPool = rootPool.filter(r=>r!=='Eb');
       const root = pick(rootPool);
       const correctNotes = buildModeScale(root, modeDef);
       const correctLabel = correctNotes.join(' ');
@@ -623,7 +623,7 @@
         curiosity: modeDef.note,
         keyboard: { pcs: correctNotes.map(n=>parseNote(n).pc), rootPc: parseNote(root).pc }
       };
-    } else {
+    } else if(roll < 0.72){
       const key = pick(KEYS);
       const degreeIdx = Math.floor(Math.random()*7);
       const startNote = key.scale[degreeIdx];
@@ -642,10 +642,57 @@
         question:`Le note della tonalità di ${key.root} maggiore, suonate a partire da ${startNote} (grado ${ROMAN[degreeIdx]}), danno origine a quale modo?`,
         options,
         correctAnswer: correctMode.name,
-        explain: `Grado ${ROMAN[degreeIdx]} della scala maggiore → modo ${correctMode.name}. (Ionico=I, Dorico=II, Frigio=III, Lidio=IV, Misolidio=V, Eolio=VI, Locrio=VII)`,
+        explain: `Grado ${ROMAN[degreeIdx]} della scala maggiore → modo ${correctMode.name}. (Ionian=I, Dorian=II, Phrygian=III, Lydian=IV, Mixolydian=V, Aeolian=VI, Locrian=VII)`,
         curiosity: correctMode.note,
         keyboard: { pcs: modeNotes.map(n=>parseNote(n).pc), rootPc: parseNote(startNote).pc }
       };
+    } else {
+      // Relativo vs Parallelo — dalla logica del video "Scales Vs Modes: What's the Difference?"
+      const isRelative = Math.random() < 0.5;
+
+      if(isRelative){
+        const key = pick(KEYS);
+        let i1 = Math.floor(Math.random()*7);
+        let i2 = Math.floor(Math.random()*7);
+        while(i2 === i1) i2 = Math.floor(Math.random()*7);
+        const rootA = key.scale[i1], modeA = MODES[i1];
+        const rootB = key.scale[i2], modeB = MODES[i2];
+        const scaleA = buildModeScale(rootA, modeA);
+        const scaleB = buildModeScale(rootB, modeB);
+        const unionPcs = [...new Set([...scaleA.map(n=>parseNote(n).pc), ...scaleB.map(n=>parseNote(n).pc)])];
+
+        return {
+          category:'modi',
+          tag:'Modi',
+          question:`${rootA} ${modeA.name} e ${rootB} ${modeB.name}: sono modi relativi o paralleli?`,
+          options: shuffle(['Relativi','Paralleli']),
+          correctAnswer: 'Relativi',
+          explain: `Usano esattamente le stesse note (l'armatura di ${key.root} maggiore) ma partono da toniche diverse: sono modi RELATIVI, cioè lo stesso set di note letto da un altro grado.`,
+          curiosity: 'Questa distinzione — relativo vs parallelo — è il fulcro del video "Scales Vs Modes: What\'s the Difference?" di Rick Beato.',
+          keyboard: { pcs: unionPcs, rootPc: parseNote(rootA).pc }
+        };
+      } else {
+        const root = pick(MODE_ROOTS);
+        const modePool = root === 'Eb' ? MODES.filter(m=>m.name!=='Locrian') : MODES;
+        let m1 = Math.floor(Math.random()*modePool.length);
+        let m2 = Math.floor(Math.random()*modePool.length);
+        while(m2 === m1) m2 = Math.floor(Math.random()*modePool.length);
+        const modeA = modePool[m1], modeB = modePool[m2];
+        const scaleA = buildModeScale(root, modeA);
+        const scaleB = buildModeScale(root, modeB);
+        const unionPcs = [...new Set([...scaleA.map(n=>parseNote(n).pc), ...scaleB.map(n=>parseNote(n).pc)])];
+
+        return {
+          category:'modi',
+          tag:'Modi',
+          question:`${root} ${modeA.name} e ${root} ${modeB.name}: sono modi relativi o paralleli?`,
+          options: shuffle(['Relativi','Paralleli']),
+          correctAnswer: 'Paralleli',
+          explain: `Condividono la stessa tonica (${root}) ma usano note diverse: sono modi PARALLELI, cioè la stessa fondamentale vista attraverso "colori" modali diversi.`,
+          curiosity: 'Questa distinzione — relativo vs parallelo — è il fulcro del video "Scales Vs Modes: What\'s the Difference?" di Rick Beato.',
+          keyboard: { pcs: unionPcs, rootPc: parseNote(root).pc }
+        };
+      }
     }
   }
 
