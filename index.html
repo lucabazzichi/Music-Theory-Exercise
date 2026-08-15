@@ -707,18 +707,33 @@
     const scaleDef = pick(SCALE_TYPES);
     const notes = buildModeScale(root, scaleDef);
     const correctLabel = notes.join(' ');
-    const options = shuffle(SCALE_TYPES.map(t=>t.name));
+    const isConstruction = Math.random() < 0.5;
 
-    return {
-      category:'scale',
-      tag:'Scale',
-      question:`Che tipo di scala è: ${correctLabel}?`,
-      options,
-      correctAnswer: scaleDef.name,
-      explain: `${scaleDef.formulaLabel} → ${root} ${scaleDef.name}: ${correctLabel}`,
-      curiosity: scaleDef.note,
-      keyboard: { pcs: notes.map(n=>parseNote(n).pc), rootPc: parseNote(root).pc }
-    };
+    if(isConstruction){
+      const options = shuffle(SCALE_TYPES.map(t => buildModeScale(root, t).join(' ')));
+      return {
+        category:'scale',
+        tag:'Scale',
+        question:`Qual è la scala ${scaleDef.name.toLowerCase()} di ${root}?`,
+        options,
+        correctAnswer: correctLabel,
+        explain: `${scaleDef.formulaLabel} → ${root} ${scaleDef.name}: ${correctLabel}`,
+        curiosity: scaleDef.note,
+        keyboard: { pcs: notes.map(n=>parseNote(n).pc), rootPc: parseNote(root).pc }
+      };
+    } else {
+      const options = shuffle(SCALE_TYPES.map(t=>t.name));
+      return {
+        category:'scale',
+        tag:'Scale',
+        question:`Che tipo di scala è: ${correctLabel}?`,
+        options,
+        correctAnswer: scaleDef.name,
+        explain: `${scaleDef.formulaLabel} → ${root} ${scaleDef.name}: ${correctLabel}`,
+        curiosity: scaleDef.note,
+        keyboard: { pcs: notes.map(n=>parseNote(n).pc), rootPc: parseNote(root).pc }
+      };
+    }
   }
 
   function genIntervalExercise(difficulty){
