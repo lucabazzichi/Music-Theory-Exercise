@@ -105,6 +105,15 @@
     cursor:pointer;
     transition:background 0.15s, color 0.15s, border-color 0.15s;
   }
+  .cats-wide{
+    margin-bottom:16px;
+  }
+  .cats-wide .cat-btn{
+    width:100%;
+    padding:12px 10px;
+    font-size:0.85rem;
+    border-radius:12px;
+  }
   .cat-btn.active{
     background:var(--gold);
     border-color:var(--gold);
@@ -319,6 +328,7 @@
   </div>
 
   <div class="cats" id="cats"></div>
+  <div class="cats-wide" id="catsWide"></div>
 
   <div class="scorebar">
     <div>
@@ -690,11 +700,111 @@
   }
 
   const SCALE_TYPES = [
-    {name:'Maggiore',        formula:[0,2,4,5,7,9,11], formulaLabel:'1 – 2 – 3 – 4 – 5 – 6 – 7',       note:'Schema di toni/semitoni: T-T-S-T-T-T-S. È la scala di riferimento per tutte le altre.'},
-    {name:'Minore naturale', formula:[0,2,3,5,7,8,10], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – ♭6 – ♭7',     note:'Corrisponde al modo Eolio: stessa armatura della relativa maggiore, tonica diversa.'},
-    {name:'Minore armonica', formula:[0,2,3,5,7,8,11], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – ♭6 – 7',      note:'Settima maggiore (sensibile) per creare tensione verso la tonica: caratteristico il salto di seconda eccedente tra 6° e 7° grado.'},
-    {name:'Minore melodica', formula:[0,2,3,5,7,9,11], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – 6 – 7',       note:'Sesta e settima maggiori per ammorbidire il salto della armonica (qui nella forma "jazz", identica in salita e in discesa).'}
+    {name:'Maggiore',        formula:[0,2,4,5,7,9,11], formulaLabel:'1 – 2 – 3 – 4 – 5 – 6 – 7',       note:'Schema di toni/semitoni: T-T-S-T-T-T-S. È la scala di riferimento per tutte le altre.', qualities:['Maggiore','minore','minore','Maggiore','Maggiore','minore','diminuito']},
+    {name:'Minore naturale', formula:[0,2,3,5,7,8,10], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – ♭6 – ♭7',     note:'Corrisponde al modo Eolio: stessa armatura della relativa maggiore, tonica diversa.', qualities:['minore','diminuito','Maggiore','minore','minore','Maggiore','Maggiore']},
+    {name:'Minore armonica', formula:[0,2,3,5,7,8,11], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – ♭6 – 7',      note:'Settima maggiore (sensibile) per creare tensione verso la tonica: caratteristico il salto di seconda eccedente tra 6° e 7° grado.', qualities:['minore','diminuito','aumentata','minore','Maggiore','Maggiore','diminuito']},
+    {name:'Minore melodica', formula:[0,2,3,5,7,9,11], formulaLabel:'1 – 2 – ♭3 – 4 – 5 – 6 – 7',       note:'Sesta e settima maggiori per ammorbidire il salto della armonica (qui nella forma "jazz", identica in salita e in discesa).', qualities:['minore','minore','aumentata','Maggiore','Maggiore','diminuito','diminuito']}
   ];
+  const CHORD_SUFFIX = {Maggiore:'', minore:'m', diminuito:'°', aumentata:'+'};
+  const QUALITY_TO_CHORDTYPE = {Maggiore:'maggiore', minore:'minore', diminuito:'diminuita', aumentata:'aumentata'};
+
+  function romanFor(idx, quality){
+    const base = ROMAN[idx];
+    if(quality==='Maggiore') return base;
+    if(quality==='minore') return base.toLowerCase();
+    if(quality==='diminuito') return base.toLowerCase()+'°';
+    return base+'+'; // aumentata
+  }
+  function chordSymbol(root, quality){
+    return root + CHORD_SUFFIX[quality];
+  }
+  function randomDegreeSet(length){
+    const degrees = [];
+    for(let i=0;i<length;i++){
+      let d;
+      do { d = Math.floor(Math.random()*7); } while(degrees.length>0 && d===degrees[degrees.length-1]);
+      degrees.push(d);
+    }
+    return degrees;
+  }
+  const PROGRESSION_LENGTHS = [2,3,4,5,6];
+  function buildProgression(scaleTypeDef, root, degrees){
+    const scaleNotes = buildModeScale(root, scaleTypeDef);
+    const romanArr = degrees.map(d => romanFor(d, scaleTypeDef.qualities[d]));
+    const chordsArr = degrees.map(d => chordSymbol(scaleNotes[d], scaleTypeDef.qualities[d]));
+    return { romanArr, chordsArr, roman: romanArr.join(' - '), chords: chordsArr.join(' - '), degrees, scaleNotes };
+  }
+  function closenessRoman(a,b){
+    let score = 0;
+    for(let i=0;i<a.romanArr.length;i++){ if(a.romanArr[i] !== b.romanArr[i]) score++; }
+    return score;
+  }
+
+  function genProgressionExercise(difficulty){
+    const scaleTypeDef = pick(SCALE_TYPES);
+    const rootPool = SCALE_ROOTS_BY_DIFF[difficulty] || MODE_ROOTS;
+    const root = pick(rootPool);
+    const length = pick(PROGRESSION_LENGTHS);
+    const degrees = randomDegreeSet(length);
+    const correct = buildProgression(scaleTypeDef, root, degrees);
+
+    let candidates = [];
+    SCALE_TYPES.filter(st=>st!==scaleTypeDef).forEach(st=>{
+      candidates.push(buildProgression(st, root, degrees));
+    });
+    for(let k=0;k<3;k++){
+      const shuffledDegrees = shuffle(degrees.slice());
+      candidates.push(buildProgression(scaleTypeDef, root, shuffledDegrees));
+    }
+    for(let k=0;k<4;k++){
+      candidates.push(buildProgression(scaleTypeDef, root, randomDegreeSet(length)));
+    }
+
+    const isChordsToDegrees = Math.random() < 0.5;
+    const chordNotesOf = (deg) => buildTriad(correct.scaleNotes[deg], QUALITY_TO_CHORDTYPE[scaleTypeDef.qualities[deg]]);
+    const allPcs = [...new Set(degrees.flatMap(d => chordNotesOf(d).map(n=>parseNote(n).pc)))];
+
+    if(isChordsToDegrees){
+      let pool = uniqueBy(candidates, c=>c.roman).filter(c=>c.roman!==correct.roman);
+      let ordered = orderByDifficulty(pool, difficulty, c => closenessRoman(correct, c));
+      let distractors = ordered.slice(0,3);
+      while(distractors.length < 3){
+        const extra = buildProgression(scaleTypeDef, root, randomDegreeSet(length));
+        if(extra.roman!==correct.roman && !distractors.some(d=>d.roman===extra.roman)) distractors.push(extra);
+      }
+      const options = shuffle([correct.roman, ...distractors.map(c=>c.roman)]);
+      return {
+        category:'progressioni',
+        tag:'Progressioni',
+        question:`Che progressione di gradi è: ${correct.chords}?`,
+        options,
+        correctAnswer: correct.roman,
+        explain: `${root} ${scaleTypeDef.name.toLowerCase()}: ${correct.chords} → ${correct.roman}`,
+        curiosity: scaleTypeDef.note,
+        keyboard: { pcs: allPcs, rootPc: parseNote(root).pc }
+      };
+    } else {
+      let pool = uniqueBy(candidates, c=>c.chords).filter(c=>c.chords!==correct.chords);
+      let ordered = orderByDifficulty(pool, difficulty, c => closenessRoman(correct, c));
+      let distractors = ordered.slice(0,3);
+      while(distractors.length < 3){
+        const extra = buildProgression(scaleTypeDef, root, randomDegreeSet(length));
+        if(extra.chords!==correct.chords && !distractors.some(d=>d.chords===extra.chords)) distractors.push(extra);
+      }
+      const options = shuffle([correct.chords, ...distractors.map(c=>c.chords)]);
+      return {
+        category:'progressioni',
+        tag:'Progressioni',
+        question:`Costruisci la progressione ${correct.roman} in ${root} ${scaleTypeDef.name.toLowerCase()}: quali accordi sono?`,
+        options,
+        correctAnswer: correct.chords,
+        explain: `${root} ${scaleTypeDef.name.toLowerCase()}: ${correct.roman} → ${correct.chords}`,
+        curiosity: scaleTypeDef.note,
+        keyboard: { pcs: allPcs, rootPc: parseNote(root).pc }
+      };
+    }
+  }
+
   const SCALE_ROOTS_BY_DIFF = {
     facile: ['C','D','F','G','A'],
     intermedio: MODE_ROOTS,
@@ -788,8 +898,8 @@
     }
   }
 
-  const GENERATORS = { triadi: genTriadExercise, diatonici: genDiatonicExercise, modi: genModeExercise, scale: genScaleExercise, intervalli: genIntervalExercise };
-  const CATEGORY_LABELS = { triadi:'Triadi', diatonici:'Accordi', modi:'Modi', scale:'Scale', intervalli:'Intervalli' };
+  const GENERATORS = { triadi: genTriadExercise, diatonici: genDiatonicExercise, modi: genModeExercise, scale: genScaleExercise, progressioni: genProgressionExercise, intervalli: genIntervalExercise };
+  const CATEGORY_LABELS = { triadi:'Triadi', diatonici:'Accordi', modi:'Modi', scale:'Scale', progressioni:'Progressioni', intervalli:'Intervalli' };
 
   /* ================= KEYBOARD RENDER ================= */
   const WHITE_PCS = [0,2,4,5,7,9,11];
@@ -814,11 +924,11 @@
   }
 
   /* ================= STATE ================= */
-  let activeCats = new Set(['triadi','diatonici','modi','scale','intervalli']);
+  let activeCats = new Set(['triadi','diatonici','modi','scale','progressioni','intervalli']);
   let difficulty = 'intermedio';
   let current = null;
   let answered = false;
-  let stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, scale:{t:0,c:0}, intervalli:{t:0,c:0} } };
+  let stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, scale:{t:0,c:0}, progressioni:{t:0,c:0}, intervalli:{t:0,c:0} } };
 
   async function loadStats(){
     if(typeof window.storage === 'undefined') return;
@@ -832,17 +942,23 @@
           if(parsed.byCat && parsed.byCat[cat]) stats.byCat[cat] = parsed.byCat[cat];
         });
         if(parsed.difficulty === 'facile' || parsed.difficulty === 'intermedio' || parsed.difficulty === 'difficile') difficulty = parsed.difficulty;
+        if(Array.isArray(parsed.activeCategories) && parsed.activeCategories.length > 0){
+          const valid = parsed.activeCategories.filter(c => Object.keys(CATEGORY_LABELS).includes(c));
+          if(valid.length > 0) activeCats = new Set(valid);
+        }
       }
     }catch(e){ /* no saved stats yet */ }
   }
   async function saveStats(){
     if(typeof window.storage === 'undefined') return;
-    try{ await window.storage.set('mt-stats', JSON.stringify({ total: stats.total, correct: stats.correct, byCat: stats.byCat, difficulty }), false); }
+    try{ await window.storage.set('mt-stats', JSON.stringify({ total: stats.total, correct: stats.correct, byCat: stats.byCat, difficulty, activeCategories:[...activeCats] }), false); }
     catch(e){ /* best effort */ }
   }
 
   /* ================= RENDER ================= */
   const catsEl = document.getElementById('cats');
+  const catsWideEl = document.getElementById('catsWide');
+  const FULL_WIDTH_CATS = new Set(['progressioni']);
   const tagEl = document.getElementById('tag');
   const questionEl = document.getElementById('question');
   const optionsEl = document.getElementById('options');
@@ -856,6 +972,7 @@
 
   function renderCats(){
     catsEl.innerHTML = '';
+    catsWideEl.innerHTML = '';
     Object.keys(CATEGORY_LABELS).forEach(cat=>{
       const btn = document.createElement('button');
       btn.className = 'cat-btn' + (activeCats.has(cat) ? ' active' : '');
@@ -867,11 +984,12 @@
           activeCats.add(cat);
         }
         renderCats();
+        saveStats();
         if(!activeCats.has(current.category)){
           newExercise();
         }
       };
-      catsEl.appendChild(btn);
+      (FULL_WIDTH_CATS.has(cat) ? catsWideEl : catsEl).appendChild(btn);
     });
   }
 
@@ -945,14 +1063,14 @@
     newExercise();
   });
   resetBtn.addEventListener('click', async ()=>{
-    stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, scale:{t:0,c:0}, intervalli:{t:0,c:0} } };
+    stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, scale:{t:0,c:0}, progressioni:{t:0,c:0}, intervalli:{t:0,c:0} } };
     await saveStats();
     renderScore();
   });
 
   (async function init(){
-    renderCats();
     await loadStats();
+    renderCats();
     diffSelect.value = difficulty;
     renderScore();
     newExercise();
