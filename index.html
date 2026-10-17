@@ -6,11 +6,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Teoria">
 <meta name="format-detection" content="telephone=no">
 <title>Allenamento di Teoria Musicale</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#1f150f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="fonts.css">
 <style>
   :root{
     --bg:#1f150f;
@@ -930,10 +933,26 @@
   let answered = false;
   let stats = { total:0, correct:0, byCat:{ triadi:{t:0,c:0}, diatonici:{t:0,c:0}, modi:{t:0,c:0}, scale:{t:0,c:0}, progressioni:{t:0,c:0}, intervalli:{t:0,c:0} } };
 
-  async function loadStats(){
-    if(typeof window.storage === 'undefined') return;
+  /* ================= STORAGE (Claude oppure browser) ================= */
+  async function storageGet(key){
+    if(typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function'){
+      return await window.storage.get(key, false);
+    }
     try{
-      const res = await window.storage.get('mt-stats', false);
+      const v = window.localStorage.getItem(key);
+      return v === null ? null : { key, value: v };
+    }catch(e){ return null; }
+  }
+  async function storageSet(key, value){
+    if(typeof window.storage !== 'undefined' && window.storage && typeof window.storage.set === 'function'){
+      return await window.storage.set(key, value, false);
+    }
+    try{ window.localStorage.setItem(key, value); }catch(e){ /* best effort */ }
+  }
+
+  async function loadStats(){
+    try{
+      const res = await storageGet('mt-stats');
       if(res && res.value){
         const parsed = JSON.parse(res.value);
         stats.total = parsed.total || 0;
@@ -950,8 +969,7 @@
     }catch(e){ /* no saved stats yet */ }
   }
   async function saveStats(){
-    if(typeof window.storage === 'undefined') return;
-    try{ await window.storage.set('mt-stats', JSON.stringify({ total: stats.total, correct: stats.correct, byCat: stats.byCat, difficulty, activeCategories:[...activeCats] }), false); }
+    try{ await storageSet('mt-stats', JSON.stringify({ total: stats.total, correct: stats.correct, byCat: stats.byCat, difficulty, activeCategories:[...activeCats] })); }
     catch(e){ /* best effort */ }
   }
 
@@ -1077,6 +1095,14 @@
   })();
 
 })();
+</script>
+
+<script>
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){ /* offline non disponibile, l'app funziona comunque */ });
+  });
+}
 </script>
 </body>
 </html>
