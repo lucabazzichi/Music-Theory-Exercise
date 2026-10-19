@@ -312,6 +312,21 @@
     cursor:pointer;
   }
   .next-btn:disabled{ opacity:0.35; cursor:default; }
+
+  /* ---------- toast (stato offline) ---------- */
+  .toast{
+    position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom));
+    transform:translate(-50%,16px);
+    background:var(--bg-alt); color:var(--gold);
+    border:1px solid rgba(201,154,68,0.45);
+    padding:9px 16px; border-radius:999px;
+    font-family:'Space Grotesk', sans-serif; font-size:0.78rem; font-weight:600; line-height:1.3;
+    text-align:center; max-width:calc(100% - 28px);
+    opacity:0; pointer-events:none; z-index:50;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{ opacity:1; transform:translate(-50%,0); }
+  .toast.warn{ color:#f3c9b9; border-color:rgba(168,80,58,0.7); }
 </style>
 </head>
 <body>
@@ -353,6 +368,8 @@
   </div>
 
 </div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function(){
@@ -1098,11 +1115,96 @@
 </script>
 
 <script>
-if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+/* Offline: registra il service worker e controlla che i file essenziali siano davvero in cache. */
+(function(){
+  var toastEl = document.getElementById('toast'), timer = null;
+  function toast(msg, warn, ms){
+    if(!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (warn ? ' warn' : '');
+    clearTimeout(timer);
+    timer = setTimeout(function(){ toastEl.className = 'toast' + (warn ? ' warn' : ''); }, ms || 3800);
+  }
+  function getFlag(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function setFlag(k){ try{ localStorage.setItem(k, '1'); }catch(e){} }
+
+  var offlineNow = (navigator.onLine === false);
+  if(offlineNow) window.addEventListener('load', function(){ toast('Modalità offline attiva ✓', false, 2600); });
+
+  if(!('serviceWorker' in navigator)) return;
+  if(location.protocol === 'file:') return;                       // aperto come file locale: niente offline, nessun avviso
+  var local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  if(location.protocol !== 'https:' && !local){
+    window.addEventListener('load', function(){ toast('Offline non disponibile: apri il sito con https://', true, 6000); });
+    return;
+  }
+
+  var ESSENTIAL = ['index.html'], NICE = ['fonts.css'];
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  async function missingOf(list){
+    var out = [];
+    for(var i=0;i<list.length;i++){
+      var hit = await caches.match(new URL(list[i], document.baseURI).href);
+      if(!hit) out.push(list[i]);
+    }
+    return out;
+  }
+  async function verify(){
+    var missing = ESSENTIAL, nice = NICE;
+    for(var t=0;t<16;t++){                                        // fino a ~8 secondi per il primo salvataggio
+      missing = await missingOf(ESSENTIAL); nice = await missingOf(NICE);
+      if(!missing.length && (!nice.length || t >= 5)) break;   // i font opzionali: attendo al massimo ~3 secondi
+      await sleep(500);
+    }
+    if(offlineNow) return;
+    if(missing.length){
+      toast('Offline non completo: manca ' + missing.join(', ') + '. Ricarica con internet.', true, 7000);
+    } else if(nice.length){
+      toast('Offline attivo, ma nel repo manca ' + nice.join(', ') + ': i font saranno diversi', true, 7000);
+    } else if(!getFlag('mt-offline-ok')){
+      setFlag('mt-offline-ok'); toast('Pronto per l\'uso offline ✓', false, 4200);
+    }
+  }
+
+  /* Se l'installazione fallisce, navigator.serviceWorker.ready resta in attesa per sempre senza errori:
+     osservo lo stato reale del worker e spiego all'utente quale file manca nel repo. */
+  async function diagnose(){
+    var files = ['index.html', 'sw.js', 'fonts.css'], missing = [];
+    for(var i=0;i<files.length;i++){
+      try{
+        var r = await fetch(new URL(files[i], document.baseURI).href, { cache: 'no-store' });
+        if(!r.ok) missing.push(files[i]);
+      }catch(e){ /* rete assente: non è un file mancante */ }
+    }
+    return missing;
+  }
+  async function warnInstallFailed(){
+    if(offlineNow) return;
+    var missing = await diagnose();
+    toast(missing.length ? 'Offline non attivo: nel repo mancano ' + missing.join(', ')
+                         : 'Offline non attivo: ricarica la pagina con internet', true, 8000);
+  }
+  function waitActivated(reg){
+    var sw = reg.installing || reg.waiting || reg.active;
+    if(!sw || sw.state === 'activated') return Promise.resolve();
+    return new Promise(function(resolve, reject){
+      var timer = setTimeout(function(){ reject(new Error('timeout')); }, 20000);
+      sw.addEventListener('statechange', function(){
+        if(sw.state === 'activated'){ clearTimeout(timer); resolve(); }
+        else if(sw.state === 'redundant'){ clearTimeout(timer); reject(new Error('install failed')); }
+      });
+    });
+  }
+
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js').catch(function(){ /* offline non disponibile, l'app funziona comunque */ });
+    navigator.serviceWorker.register('sw.js')
+      .then(function(reg){
+        if(reg.active) return verify();                  // già installato: controllo solo che i file ci siano
+        return waitActivated(reg).then(verify);
+      })
+      .catch(warnInstallFailed);
   });
-}
+})();
 </script>
 </body>
 </html>
