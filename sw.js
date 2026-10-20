@@ -1,38 +1,40 @@
 /* Service worker — offline per "Allenamento di Teoria Musicale".
-   Strategia: risponde subito dalla cache e intanto aggiorna in background.
-   Quando pubblichi una nuova versione dei file, cambia CACHE_VERSION (es. 'v4'). */
-const CACHE_VERSION = 'v3';
+   Strategia: l'app è una sola pagina (index.html). Ogni apertura dell'app mostra subito la copia salvata
+   e intanto la aggiorna in background (la nuova versione compare alla riapertura successiva).
+   Quando pubblichi una nuova versione dei file, cambia CACHE_VERSION (es. 'v5'). */
+const CACHE_VERSION = 'v4';
 const CACHE_PREFIX = 'teoria-musicale-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 const SCOPE = self.registration.scope;            // es. https://utente.github.io/nome-repo/
 const abs = p => new URL(p, SCOPE).href;
 const INDEX = abs('index.html');
-/* L'app è tutta in index.html (font e logo inclusi): è l'unico file da salvare all'installazione.
-   Manifest e icone vengono salvati al volo la prima volta che la pagina li richiede (vedi handle). */
+const keyOf = url => { const u = new URL(url); return u.origin + u.pathname; };   // ignora ?query e #hash
+const INDEX_KEY = keyOf(INDEX), ROOT_KEY = keyOf(abs('./'));
+const MATCH = { ignoreVary: true };               // Safari confronta "Vary: Accept-Encoding" di GitHub in modo diverso da Chrome
 
-/* Safari/Chrome rifiutano risposte "redirected" usate per una navigazione: le ricostruisco. */
-async function clean(res) {
-  if (!res.redirected) return res;
-  return new Response(await res.blob(), { status: res.status, statusText: res.statusText, headers: res.headers });
+/* Copia "pulita": solo corpo + Content-Type. Elimina Content-Encoding, Vary, ETag, flag "redirected" ecc.,
+   che in Safari possono far rifiutare una risposta data da un service worker a una navigazione. */
+async function sanitize(res) {
+  const body = await res.arrayBuffer();
+  return new Response(body, { status: 200, headers: { 'Content-Type': res.headers.get('Content-Type') || 'application/octet-stream' } });
 }
-const keyOf = url => { const u = new URL(url); return u.origin + u.pathname; };   // ignora ?query
+async function savePage(cache, res) {
+  const page = await sanitize(res);
+  await cache.put(INDEX_KEY, page.clone());
+  await cache.put(ROOT_KEY, page.clone());        // indirizzo senza nome file (…/nome-repo/)
+}
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const names = await caches.keys();
     const isUpdate = names.some(n => n.startsWith(CACHE_PREFIX) && n !== CACHE_NAME);
-    /* Primo salvataggio: la pagina è appena stata scaricata, quindi la prendo dalla cache del browser
+    /* Primo salvataggio: la pagina è appena stata scaricata, la prendo dalla cache del browser
        (istantaneo, funziona anche se la connessione cade un attimo dopo). Aggiornamenti: sempre dalla rete. */
-    const mode = isUpdate ? 'reload' : 'default';
-    const cache = await caches.open(CACHE_NAME);
-
-    const res = await fetch(new Request(INDEX, { cache: mode }));
+    const res = await fetch(new Request(INDEX, { cache: isUpdate ? 'reload' : 'default' }));
     if (!res.ok) throw new Error('index.html -> ' + res.status);
-    const page = await clean(res);
-    await cache.put(keyOf(INDEX), page.clone());
-    await cache.put(keyOf(abs('./')), page.clone());          // indirizzo senza nome file (…/nome-repo/)
-    await self.skipWaiting();                                  // da qui l'app è già utilizzabile offline
+    await savePage(await caches.open(CACHE_NAME), res);
+    await self.skipWaiting();                      // da qui l'app è già utilizzabile offline
   })());
 });
 
@@ -48,29 +50,37 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
-  if (!req.url.startsWith(SCOPE)) return;
-  event.respondWith(handle(event));
+  if (url.origin !== self.location.origin || !req.url.startsWith(SCOPE)) return;
+  event.respondWith(req.mode === 'navigate' ? handleNavigation(event) : handleAsset(event));
 });
 
-async function handle(event) {
-  const req = event.request;
+/* Qualsiasi apertura dell'app (icona in Home, link, con o senza nome file) → pagina salvata. */
+async function handleNavigation(event) {
   const cache = await caches.open(CACHE_NAME);
-  const key = keyOf(req.url);
-  const cached = await cache.match(key);
+  const cached = await cache.match(INDEX_KEY, MATCH) || await cache.match(ROOT_KEY, MATCH);
+  if (cached) {
+    event.waitUntil((async () => {                 // aggiorna in background; se sei offline non succede nulla
+      try {
+        const res = await fetch(new Request(INDEX, { cache: 'no-cache' }));
+        if (res.ok) await savePage(cache, res);
+      } catch (e) { /* offline */ }
+    })());
+    return cached;
+  }
+  try { return await fetch(event.request); }
+  catch (e) { return new Response('Offline: apri l\'app una volta con internet.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }); }
+}
 
-  const network = fetch(req).then(async res => {
-    if (res && res.ok && res.type === 'basic') await cache.put(key, await clean(res.clone()));
+/* Manifest, icone, ecc.: dalla cache se ci sono, altrimenti rete (e li salvo per dopo). */
+async function handleAsset(event) {
+  const cache = await caches.open(CACHE_NAME);
+  const key = keyOf(event.request.url);
+  const cached = await cache.match(key, MATCH);
+  const network = fetch(event.request).then(async res => {
+    if (res && res.ok && res.type === 'basic') await cache.put(key, await sanitize(res.clone()));
     return res;
   }).catch(() => null);
-
-  if (cached) { event.waitUntil(network); return cached; }   // online o offline: risposta immediata
-
+  if (cached) { event.waitUntil(network); return cached; }
   const fresh = await network;
-  if (fresh) return fresh;
-  if (req.mode === 'navigate') {                              // ultima rete di sicurezza: apre comunque l'app
-    const fallback = await cache.match(keyOf(INDEX));
-    if (fallback) return fallback;
-  }
-  return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  return fresh || new Response('', { status: 504 });
 }
