@@ -1,16 +1,15 @@
 /* Service worker — offline per "Allenamento di Teoria Musicale".
    Strategia: risponde subito dalla cache e intanto aggiorna in background.
-   Quando pubblichi una nuova versione dei file, cambia CACHE_VERSION (es. 'v3'). */
-const CACHE_VERSION = 'v2';
+   Quando pubblichi una nuova versione dei file, cambia CACHE_VERSION (es. 'v4'). */
+const CACHE_VERSION = 'v3';
 const CACHE_PREFIX = 'teoria-musicale-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 const SCOPE = self.registration.scope;            // es. https://utente.github.io/nome-repo/
 const abs = p => new URL(p, SCOPE).href;
 const INDEX = abs('index.html');
-const CRITICAL = [abs('index.html')];                      // senza questo l'app non funziona offline
-const OPTIONAL = [abs('./'), abs('fonts.css'), abs('manifest.webmanifest'),
-                  abs('icons/icon-192.png'), abs('icons/icon-512.png'), abs('icons/apple-touch-icon.png')];
+/* L'app è tutta in index.html (font e logo inclusi): è l'unico file da salvare all'installazione.
+   Manifest e icone vengono salvati al volo la prima volta che la pagina li richiede (vedi handle). */
 
 /* Safari/Chrome rifiutano risposte "redirected" usate per una navigazione: le ricostruisco. */
 async function clean(res) {
@@ -21,18 +20,19 @@ const keyOf = url => { const u = new URL(url); return u.origin + u.pathname; }; 
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
+    const names = await caches.keys();
+    const isUpdate = names.some(n => n.startsWith(CACHE_PREFIX) && n !== CACHE_NAME);
+    /* Primo salvataggio: la pagina è appena stata scaricata, quindi la prendo dalla cache del browser
+       (istantaneo, funziona anche se la connessione cade un attimo dopo). Aggiornamenti: sempre dalla rete. */
+    const mode = isUpdate ? 'reload' : 'default';
     const cache = await caches.open(CACHE_NAME);
-    const add = async url => {
-      const res = await fetch(new Request(url, { cache: 'reload' }));   // salta la cache HTTP del browser
-      if (!res.ok) throw new Error(url + ' -> ' + res.status);
-      await cache.put(keyOf(url), await clean(res));
-    };
-    const critical = await Promise.allSettled(CRITICAL.map(add));
-    await Promise.allSettled(OPTIONAL.map(add));                          // i file opzionali non bloccano l'installazione
-    if (critical.some(r => r.status === 'rejected')) {
-      throw new Error('File essenziale non raggiungibile: ' + critical.filter(r => r.status === 'rejected').map(r => r.reason.message).join('; '));
-    }
-    await self.skipWaiting();
+
+    const res = await fetch(new Request(INDEX, { cache: mode }));
+    if (!res.ok) throw new Error('index.html -> ' + res.status);
+    const page = await clean(res);
+    await cache.put(keyOf(INDEX), page.clone());
+    await cache.put(keyOf(abs('./')), page.clone());          // indirizzo senza nome file (…/nome-repo/)
+    await self.skipWaiting();                                  // da qui l'app è già utilizzabile offline
   })());
 });
 
